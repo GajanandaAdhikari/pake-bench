@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-    client := opaque.NewClient()
+    client := client := opaque.NewClient(opaque.P256, opaque.SHA256)  // for P-256
     initMsg, err := client.SerializeRegistrationRequest()
     if err != nil {
         log.Fatal(err)

@@ -1,15 +1,29 @@
 version: '3.8'
+
 services:
   client:
-    build: ./client
+    build:
+      context: .
+      dockerfile: client/Dockerfile
     networks:
       - pake-net
+    ports:
+      - "3000:3000" 
+    depends_on:
+      - server
+
   server:
-    build: ./server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    networks:
+      - pake-net
     ports:
       - "8080:8080"
-    networks:
-      - pake-net
+    volumes:
+      - ./protocols:/go/src/protocols
+      - ./benchmarks:/go/src/benchmarks
+
 networks:
   pake-net:
     driver: bridge
