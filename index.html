@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opaque Bench - Cryptographic Performance Benchmarking</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+            color: #e8eaed;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #4fc3f7, #29b6f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #b0bec5;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group h3 {
+            color: #4fc3f7;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #b0bec5;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #e8eaed;
+            font-size: 14px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4fc3f7;
+            box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4fc3f7, #29b6f6);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 195, 247, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .result-card h3 {
+            color: #4fc3f7;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-name {
+            color: #b0bec5;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            color: #e8eaed;
+        }
+
+        .performance-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4fc3f7, #29b6f6);
+            transition: width 0.8s ease;
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .status.running {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+        }
+
+        .status.complete {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: #4caf50;
+        }
+
+        .comparison-chart {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 20px;
+        }
+
+        .chart-title {
+            color: #4fc3f7;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            text-align: center;
+        }
+
+        .chart-bars {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 200px;
+            margin-bottom: 20px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            margin: 0 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .bar {
+            width: 100%;
+            background: linear-gradient(180deg, #4fc3f7, #29b6f6);
+            border-radius: 4px 4px 0 0;
+            transition: height 0.8s ease;
+            min-height: 10px;
+        }
+
+        .bar-label {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #b0bec5;
+            text-align: center;
+        }
+
+        .bar-value {
+            margin-top: 5px;
+            font-size: 11px;
+            color: #e8eaed;
+            font-weight: 600;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(79, 195, 247, 0.3);
+            border-radius: 50%;
+            border-top-color: #4fc3f7;
+            animation: spin 0.8s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Opaque Bench</h1>
+            <p>Comprehensive Cryptographic Performance Benchmarking Tool</p>
+            <p>Compare OPAQUE protocol performance against RSA and ECC</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>Test Configuration</h3>
+                <div class="form-group">
+                    <label for="iterations">Iterations:</label>
+                    <input type="number" id="iterations" value="1000" min="10" max="10000">
+                </div>
+                <div class="form-group">
+                    <label for="dataSize">Data Size (bytes):</label>
+                    <input type="number" id="dataSize" value="1024" min="64" max="8192">
+                </div>
+                <div class="form-group">
+                    <label for="testType">Test Type:</label>
+                    <select id="testType">
+                        <option value="all">All Operations</option>
+                        <option value="keygen">Key Generation</option>
+                        <option value="auth">Authentication</option>
+                        <option value="encrypt">Encryption/Decryption</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Protocol Settings</h3>
+                <div class="form-group">
+                    <label for="rsaKeySize">RSA Key Size:</label>
+                    <select id="rsaKeySize">
+                        <option value="2048">2048 bits</option>
+                        <option value="3072">3072 bits</option>
+                        <option value="4096">4096 bits</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="eccCurve">ECC Curve:</label>
+                    <select id="eccCurve">
+                        <option value="P-256">P-256</option>
+                        <option value="P-384">P-384</option>
+                        <option value="P-521">P-521</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="opaqueVersion">OPAQUE Version:</label>
+                    <select id="opaqueVersion">
+                        <option value="v1">OPAQUE v1</option>
+                        <option value="draft">OPAQUE Draft</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Run Benchmark</h3>
+                <p style="color: #b0bec5; margin-bottom: 15px;">
+                    This will simulate cryptographic operations and measure performance metrics.
+                </p>
+                <button class="btn" id="runBenchmark">
+                    <span id="btnText">Start Benchmark</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="status" class="status hidden"></div>
+
+        <div id="results" class="results hidden">
+            <div class="result-card">
+                <h3>OPAQUE Protocol</h3>
+                <div id="opaqueMetrics"></div>
+                <div class="performance-bar">
+                    <div class="bar-fill" id="opaqueBar"></div>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <h3>RSA</h3>
+                <div id="rsaMetrics"></div>
+                <div class="performance-bar">
+                    <div class="bar-fill" id="rsaBar"></div>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <h3>ECC</h3>
+                <div id="eccMetrics"></div>
+                <div class="performance-bar">
+                    <div class="bar-fill" id="eccBar"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="comparison" class="comparison-chart hidden">
+            <h3 class="chart-title">Performance Comparison</h3>
+            <div class="chart-bars">
+                <div class="chart-bar">
+                    <div class="bar" id="chartOpaqueBar"></div>
+                    <div class="bar-label">OPAQUE</div>
+                    <div class="bar-value" id="chartOpaqueValue"></div>
+                </div>
+                <div class="chart-bar">
+                    <div class="bar" id="chartRsaBar"></div>
+                    <div class="bar-label">RSA</div>
+                    <div class="bar-value" id="chartRsaValue"></div>
+                </div>
+                <div class="chart-bar">
+                    <div class="bar" id="chartEccBar"></div>
+                    <div class="bar-label">ECC</div>
+                    <div class="bar-value" id="chartEccValue"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CryptoBenchmark {
+            constructor() {
+                this.results = {};
+                this.isRunning = false;
+            }
+
+            // Simulate cryptographic operations with realistic timing
+            async simulateOperation(protocol, operation, iterations, keySize, dataSize) {
+                const baseTime = this.getBaseTime(protocol, operation, keySize, dataSize);
+                let totalTime = 0;
+                let minTime = Infinity;
+                let maxTime = 0;
+                const times = [];
+
+                for (let i = 0; i < iterations; i++) {
+                    const variance = 0.8 + Math.random() * 0.4; // ±20% variance
+                    const time = baseTime * variance;
+                    times.push(time);
+                    totalTime += time;
+                    minTime = Math.min(minTime, time);
+                    maxTime = Math.max(maxTime, time);
+
+                    // Update progress occasionally
+                    if (i % Math.max(1, Math.floor(iterations / 10)) === 0) {
+                        await this.sleep(1);
+                    }
+                }
+
+                const avgTime = totalTime / iterations;
+                const throughput = 1000 / avgTime; // ops/sec
+
+                return {
+                    avgTime: avgTime.toFixed(3),
+                    minTime: minTime.toFixed(3),
+                    maxTime: maxTime.toFixed(3),
+                    throughput: throughput.toFixed(1),
+                    totalTime: totalTime.toFixed(1),
+                    memoryUsage: this.getMemoryUsage(protocol, keySize),
+                    keySize: keySize,
+                    dataSize: dataSize
+                };
+            }
+
+            getBaseTime(protocol, operation, keySize, dataSize) {
+                const baseTimes = {
+                    'opaque': {
+                        'keygen': 8.5,
+                        'auth': 12.3,
+                        'encrypt': 3.2,
+                        'decrypt': 3.8
+                    },
+                    'rsa': {
+                        'keygen': 150,
+                        'auth': 2.1,
+                        'encrypt': 0.8,
+                        'decrypt': 45
+                    },
+                    'ecc': {
+                        'keygen': 2.5,
+                        'auth': 4.2,
+                        'encrypt': 1.5,
+                        'decrypt': 1.8
+                    }
+                };
+
+                let time = baseTimes[protocol][operation];
+
+                // Adjust for key size
+                if (protocol === 'rsa') {
+                    const sizeMultiplier = keySize === 2048 ? 1 : keySize === 3072 ? 1.8 : 3.2;
+                    time *= sizeMultiplier;
+                } else if (protocol === 'ecc') {
+                    const curveMultiplier = keySize === 'P-256' ? 1 : keySize === 'P-384' ? 1.4 : 2.1;
+                    time *= curveMultiplier;
+                }
+
+                // Adjust for data size
+                if (operation === 'encrypt' || operation === 'decrypt') {
+                    time *= Math.log(dataSize / 64) / Math.log(2);
+                }
+
+                return time;
+            }
+
+            getMemoryUsage(protocol, keySize) {
+                const memoryUsage = {
+                    'opaque': 2.3,
+                    'rsa': keySize === 2048 ? 4.1 : keySize === 3072 ? 6.2 : 8.5,
+                    'ecc': keySize === 'P-256' ? 1.2 : keySize === 'P-384' ? 1.8 : 2.4
+                };
+                return memoryUsage[protocol];
+            }
+
+            async sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            async runBenchmark() {
+                if (this.isRunning) return;
+                this.isRunning = true;
+
+                const config = this.getConfig();
+                const status = document.getElementById('status');
+                const btn = document.getElementById('runBenchmark');
+                const btnText = document.getElementById('btnText');
+
+                btn.disabled = true;
+                btnText.innerHTML = '<span class="loading"></span>Running Benchmark...';
+                status.className = 'status running';
+                status.classList.remove('hidden');
+                status.textContent = 'Initializing benchmark...';
+
+                try {
+                    const protocols = ['opaque', 'rsa', 'ecc'];
+                    const operations = config.testType === 'all' ? 
+                        ['keygen', 'auth', 'encrypt', 'decrypt'] : 
+                        [config.testType];
+
+                    this.results = {};
+
+                    for (const protocol of protocols) {
+                        status.textContent = `Testing ${protocol.toUpperCase()} protocol...`;
+                        this.results[protocol] = {};
+
+                        for (const operation of operations) {
+                            const keySize = this.getKeySize(protocol, config);
+                            const result = await this.simulateOperation(
+                                protocol, 
+                                operation, 
+                                config.iterations, 
+                                keySize, 
+                                config.dataSize
+                            );
+                            this.results[protocol][operation] = result;
+                        }
+                    }
+
+                    status.className = 'status complete';
+                    status.textContent = 'Benchmark completed successfully!';
+                    this.displayResults();
+
+                } catch (error) {
+                    status.className = 'status error';
+                    status.textContent = `Error: ${error.message}`;
+                } finally {
+                    this.isRunning = false;
+                    btn.disabled = false;
+                    btnText.textContent = 'Start Benchmark';
+                }
+            }
+
+            getKeySize(protocol, config) {
+                switch (protocol) {
+                    case 'rsa': return parseInt(config.rsaKeySize);
+                    case 'ecc': return config.eccCurve;
+                    case 'opaque': return 'default';
+                    default: return 'default';
+                }
+            }
+
+            getConfig() {
+                return {
+                    iterations: parseInt(document.getElementById('iterations').value),
+                    dataSize: parseInt(document.getElementById('dataSize').value),
+                    testType: document.getElementById('testType').value,
+                    rsaKeySize: document.getElementById('rsaKeySize').value,
+                    eccCurve: document.getElementById('eccCurve').value,
+                    opaqueVersion: document.getElementById('opaqueVersion').value
+                };
+            }
+
+            displayResults() {
+                const resultsDiv = document.getElementById('results');
+                const comparisonDiv = document.getElementById('comparison');
+                
+                resultsDiv.classList.remove('hidden');
+                comparisonDiv.classList.remove('hidden');
+
+                // Display individual protocol results
+                this.displayProtocolResults('opaque', 'opaqueMetrics', 'opaqueBar');
+                this.displayProtocolResults('rsa', 'rsaMetrics', 'rsaBar');
+                this.displayProtocolResults('ecc', 'eccMetrics', 'eccBar');
+
+                // Display comparison chart
+                this.displayComparison();
+            }
+
+            displayProtocolResults(protocol, metricsId, barId) {
+                const metricsDiv = document.getElementById(metricsId);
+                const bar = document.getElementById(barId);
+                
+                const protocolResults = this.results[protocol];
+                let html = '';
+                let totalScore = 0;
+
+                for (const [operation, metrics] of Object.entries(protocolResults)) {
+                    html += `
+                        <div class="metric">
+                            <span class="metric-name">${operation.toUpperCase()} Avg Time:</span>
+                            <span class="metric-value">${metrics.avgTime}ms</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-name">${operation.toUpperCase()} Throughput:</span>
+                            <span class="metric-value">${metrics.throughput} ops/sec</span>
+                        </div>
+                    `;
+                    totalScore += parseFloat(metrics.throughput);
+                }
+
+                html += `
+                    <div class="metric">
+                        <span class="metric-name">Memory Usage:</span>
+                        <span class="metric-value">${protocolResults[Object.keys(protocolResults)[0]].memoryUsage} MB</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-name">Overall Score:</span>
+                        <span class="metric-value">${totalScore.toFixed(1)}</span>
+                    </div>
+                `;
+
+                metricsDiv.innerHTML = html;
+
+                // Update performance bar
+                const maxScore = Math.max(
+                    ...Object.values(this.results).map(r => 
+                        Object.values(r).reduce((sum, m) => sum + parseFloat(m.throughput), 0)
+                    )
+                );
+                const percentage = (totalScore / maxScore) * 100;
+                bar.style.width = `${percentage}%`;
+            }
+
+            displayComparison() {
+                const protocols = ['opaque', 'rsa', 'ecc'];
+                const scores = protocols.map(protocol => {
+                    const protocolResults = this.results[protocol];
+                    return Object.values(protocolResults).reduce((sum, m) => sum + parseFloat(m.throughput), 0);
+                });
+
+                const maxScore = Math.max(...scores);
+
+                protocols.forEach((protocol, index) => {
+                    const bar = document.getElementById(`chart${protocol.charAt(0).toUpperCase() + protocol.slice(1)}Bar`);
+                    const value = document.getElementById(`chart${protocol.charAt(0).toUpperCase() + protocol.slice(1)}Value`);
+                    
+                    const percentage = (scores[index] / maxScore) * 100;
+                    bar.style.height = `${percentage}%`;
+                    value.textContent = `${scores[index].toFixed(1)} ops/sec`;
+                });
+            }
+        }
+
+        // Initialize the benchmark tool
+        const benchmark = new CryptoBenchmark();
+
+        document.getElementById('runBenchmark').addEventListener('click', () => {
+            benchmark.runBenchmark();
+        });
+
+        // Add some initial animations
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.control-group');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+        });
+    </script>
+</body>
+</html>
